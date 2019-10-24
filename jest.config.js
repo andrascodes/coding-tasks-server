@@ -68,6 +68,11 @@ module.exports = {
   //   "node_modules"
   // ],
 
+  "modulePaths": [
+    "<rootDir>",
+    "node_modules"
+  ],
+
   // An array of file extensions your modules use
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 
