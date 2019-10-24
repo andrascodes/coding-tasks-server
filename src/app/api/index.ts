@@ -1,4 +1,5 @@
 import express from "express";
+import { ExpressError } from "../../types/utils";
 
 export default function createApiRouter(): express.Router {
   const apiRouter = express.Router();
@@ -10,7 +11,7 @@ export default function createApiRouter(): express.Router {
   });
 
   apiRouter.get("/errorcheck", (req, res): void => {
-    throw { status: 500 };
+    throw new ExpressError(500);
   });
 
   return apiRouter;

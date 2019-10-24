@@ -1,9 +1,6 @@
 import express from "express";
+import { ExpressError } from "../types/utils";
 import createApiRouter from "./api";
-
-interface ExpressError extends Error {
-  status?: number;
-}
 
 interface CreateAppArguments {
   port: string | undefined;
