@@ -101,11 +101,26 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
   });
 
   apiRouter.get("/fields", (req, res): void => {
+    const searchString = req.query.search && req.query.search.split('"')[1];
+
     const fields: Field[] = db.get("fields").value();
 
-    res.status(200).json({
-      data: fields,
-    });
+    if (!searchString) {
+      res.status(200).json({
+        data: fields,
+      });
+    } else {
+      res.status(200).json({
+        data: fields.filter(field => {
+          const fieldString = `${field.name}, ${field.address.street}, ${field.address.zipcode} ${field.address.city}, ${field.address.country}`;
+          return fieldString
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toUpperCase()
+            .includes(searchString.toUpperCase());
+        }),
+      });
+    }
   });
 
   return apiRouter;

@@ -12,6 +12,7 @@ export function setupDb(db: lowdb.LowdbSync<any>): number[] {
   const upcomingEventId = 1;
   const upcomingStart = Date.now() / 1000 + 86400;
   const upcomingMatchFieldId = 2;
+  const pastMatchFieldId = 6;
   const pastEventId = 2;
   const pastStart = Date.now() / 1000 - 86400;
 
@@ -20,14 +21,14 @@ export function setupDb(db: lowdb.LowdbSync<any>): number[] {
       {
         id: upcomingEventId,
         title: "Friendly Football",
-        fieldId: 2,
+        fieldId: upcomingMatchFieldId,
         start: upcomingStart,
         end: upcomingStart + 3600,
       },
       {
         id: pastEventId,
-        title: "Lappis Football",
-        fieldId: 2,
+        title: "SCBC Football",
+        fieldId: pastMatchFieldId,
         start: pastStart,
         end: pastStart + 3600,
       },
@@ -49,7 +50,21 @@ export function setupDb(db: lowdb.LowdbSync<any>): number[] {
         },
       },
     })
+    .push({
+      id: pastMatchFieldId,
+      name: "Axelsbergs Bollplan",
+      address: {
+        street: "Eolshällsvägen 1",
+        city: "Hägersten",
+        zipcode: "129 37",
+        country: "Sweden",
+        location: {
+          lat: 59.30566,
+          lng: 17.969849,
+        },
+      },
+    })
     .write();
 
-  return [upcomingEventId, upcomingMatchFieldId, pastEventId, upcomingMatchFieldId];
+  return [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId];
 }

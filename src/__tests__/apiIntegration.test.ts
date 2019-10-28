@@ -3,7 +3,7 @@ import express from "express";
 import createApp from "../app";
 import lowdb from "lowdb";
 import Memory from "lowdb/adapters/Memory";
-import { MatchResponse } from "../types/database";
+import { MatchResponse, Field } from "../types/database";
 import { tearDownDb, setupDb } from "../testUtils";
 
 let app: express.Application;
@@ -34,43 +34,17 @@ describe("GET /api/healthcheck", (): void => {
   });
 });
 
-describe("ERROR route", (): void => {
+describe("GET /api/errorcheck", (): void => {
   it("should return status 500", async (): Promise<void> => {
     const res = await request(app).get("/api/errorcheck");
     expect(res.status).toEqual(500);
   });
 });
 
-describe("NOT FOUND route", (): void => {
+describe("GET /route-that-not-exists", (): void => {
   it("should return status 500", async (): Promise<void> => {
     const res = await request(app).get("/route-that-not-exists");
     expect(res.status).toEqual(404);
-  });
-});
-
-describe("GET /api/events", (): void => {
-  afterEach(() => {
-    tearDownDb(db);
-  });
-
-  it("should return status 200", async (): Promise<void> => {
-    const res = await request(app).get("/api/events");
-    expect(res.status).toEqual(200);
-  });
-
-  it("should return only upcoming matches with the field data included", async (): Promise<void> => {
-    const [upcomingEventId, upcomingMatchFieldId] = setupDb(db);
-
-    const result = await request(app)
-      .get("/api/events")
-      .then(res => res.body.data);
-
-    expect(result.length).toBe(1);
-    const upcomingMatch: MatchResponse = result[0];
-    expect(upcomingMatch.id).toBe(upcomingEventId);
-    expect(upcomingMatch).toHaveProperty("field");
-    expect(upcomingMatch).not.toHaveProperty("fieldId");
-    expect(upcomingMatch.field.id).toBe(upcomingMatchFieldId);
   });
 });
 
@@ -83,10 +57,12 @@ describe("GET /api/events/:id", (): void => {
     expect(res.status).toEqual(404);
   });
 
-  it("should return 200 if resource exists", async (): Promise<void> => {
+  it("should return 200 if resource exists and the result should have a 'data' property", async (): Promise<void> => {
     const [existingEventId] = setupDb(db);
     const res = await request(app).get(`/api/events/${existingEventId}`);
     expect(res.status).toEqual(200);
+
+    expect(res.body).toHaveProperty("data");
   });
 
   it("should return the match with the field included", async (): Promise<void> => {
@@ -117,9 +93,10 @@ describe("GET /api/events", (): void => {
     tearDownDb(db);
   });
 
-  it("should return status 200", async (): Promise<void> => {
+  it("should return status 200 and the result should have a 'data' property", async (): Promise<void> => {
     const res = await request(app).get("/api/events");
     expect(res.status).toEqual(200);
+    expect(res.body).toHaveProperty("data");
   });
 
   it("should return only upcoming matches with the field data included", async (): Promise<void> => {
@@ -139,16 +116,39 @@ describe("GET /api/events", (): void => {
 });
 
 describe("GET /api/fields", (): void => {
-  // afterEach(() => {
-  //   tearDownDb(db);
-  // });
-
-  it("should pass", async (): Promise<void> => {
-    // const [existingEventId] = setupDb(db);
-    // const res = await request(app).get(`/api/events/${existingEventId}`);
-    // expect(res.status).toEqual(200);
+  afterEach(() => {
+    tearDownDb(db);
   });
 
-  // TODO: it should have a filter based on query params
-  // TODO: it should have a filter based on query params
+  it("should return status 200 and the result should have a 'data' property", async (): Promise<void> => {
+    const res = await request(app).get("/api/fields");
+    expect(res.status).toEqual(200);
+    expect(res.body).toHaveProperty("data");
+  });
+
+  it("should return all fields if query param is omitted", async (): Promise<void> => {
+    const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
+
+    const result = await request(app)
+      .get("/api/fields")
+      .then(res => res.body.data);
+
+    expect(result.length).toBe(2);
+    const fieldIds = result.map((field: Field) => field.id);
+    expect(fieldIds).toContain(upcomingMatchFieldId);
+    expect(fieldIds).toContain(pastMatchFieldId);
+  });
+
+  it("should only return fields that match the query param", async (): Promise<void> => {
+    const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
+
+    const result = await request(app)
+      .get(`/api/fields?search="Langholmen"`)
+      .then(res => res.body.data);
+
+    expect(result.length).toBe(1);
+    const fieldIds = result.map((field: Field) => field.id);
+    expect(fieldIds).toContain(upcomingMatchFieldId);
+    expect(fieldIds).not.toContain(pastMatchFieldId);
+  });
 });
