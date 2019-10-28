@@ -1,17 +1,18 @@
 import express from "express";
+import lowdb from "lowdb";
 import { ExpressError } from "../types/utils";
 import createApiRouter from "./api";
 
 interface CreateAppArguments {
   port: string | undefined;
+  db: lowdb.LowdbAsync<any> | lowdb.LowdbSync<any>;
 }
 
-export default function createApp({ port }: CreateAppArguments): express.Application {
+export default function createApp({ port, db }: CreateAppArguments): express.Application {
   const app = express();
   app.set("port", port);
 
-  const apiRouter = createApiRouter();
-  app.use("/api", apiRouter);
+  app.use("/api", createApiRouter({ db }));
 
   // Non-existing route handler
   app.use((req, res, next) => {

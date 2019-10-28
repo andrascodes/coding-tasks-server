@@ -2,12 +2,7 @@ import express from "express";
 import net from "net";
 import dotenv from "dotenv";
 import createApp from "./app";
-
-dotenv.config();
-
-interface MainArguments {
-  app: express.Application;
-}
+import createDB from "./db";
 
 interface MainReturnType {
   app: express.Application;
@@ -15,7 +10,11 @@ interface MainReturnType {
   getPort(): string;
 }
 
-async function main({ app }: MainArguments): Promise<MainReturnType> {
+dotenv.config();
+
+async function main(): Promise<MainReturnType> {
+  const db = await createDB();
+  const app = createApp({ port: process.env.PORT, db });
   const server = await app.listen(app.get("port"));
 
   return {
@@ -30,7 +29,7 @@ async function main({ app }: MainArguments): Promise<MainReturnType> {
   };
 }
 
-main({ app: createApp({ port: process.env.PORT }) })
+main()
   .then(({ getPort }) => {
     console.log(`Server is listening on ${getPort()}`);
   })
