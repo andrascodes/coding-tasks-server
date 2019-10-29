@@ -4,7 +4,8 @@ import createApp from "../app";
 import lowdb from "lowdb";
 import Memory from "lowdb/adapters/Memory";
 import { MatchResponse, Field } from "../types/database";
-import { tearDownDb, setupDb } from "../testUtils";
+import { tearDownDb, setupDb, getUrl } from "../testUtils";
+import API_ROUTES from "../constants/apiRoutes";
 
 let app: express.Application;
 const port = "8080";
@@ -15,28 +16,28 @@ beforeAll((): void => {
   db = lowdb(adapter);
 
   db.defaults({
-    events: [],
-    fields: [],
+    [`${API_ROUTES.events}`]: [],
+    [`${API_ROUTES.fields}`]: [],
   }).write();
 
   app = createApp({ port, db });
 });
 
-describe("GET /api/healthcheck", (): void => {
+describe(`GET ${getUrl(API_ROUTES.healthcheck)}`, (): void => {
   it("should return status 200", async (): Promise<void> => {
-    const res = await request(app).get("/api/healthcheck");
+    const res = await request(app).get(getUrl(API_ROUTES.healthcheck));
     expect(res.status).toEqual(200);
   });
 
   it("should return { result: 'success' }", async (): Promise<void> => {
-    const res = await request(app).get("/api/healthcheck");
+    const res = await request(app).get(getUrl(API_ROUTES.healthcheck));
     expect(res.body).toEqual({ result: "success" });
   });
 });
 
-describe("GET /api/errorcheck", (): void => {
+describe(`GET ${getUrl(API_ROUTES.errorcheck)}`, (): void => {
   it("should return status 500", async (): Promise<void> => {
-    const res = await request(app).get("/api/errorcheck");
+    const res = await request(app).get(getUrl(API_ROUTES.errorcheck));
     expect(res.status).toEqual(500);
   });
 });
@@ -48,18 +49,18 @@ describe("GET /route-that-not-exists", (): void => {
   });
 });
 
-describe("GET /api/events/:id", (): void => {
+describe(`GET ${getUrl(API_ROUTES.events)}/:id`, (): void => {
   afterEach(() => {
     tearDownDb(db);
   });
   it("should return 404 if resource is not found", async (): Promise<void> => {
-    const res = await request(app).get("/api/events/1");
+    const res = await request(app).get(`${getUrl(API_ROUTES.events)}/1`);
     expect(res.status).toEqual(404);
   });
 
   it("should return 200 if resource exists and the result should have a 'data' property", async (): Promise<void> => {
     const [existingEventId] = setupDb(db);
-    const res = await request(app).get(`/api/events/${existingEventId}`);
+    const res = await request(app).get(`${getUrl(API_ROUTES.events)}/${existingEventId}`);
     expect(res.status).toEqual(200);
 
     expect(res.body).toHaveProperty("data");
@@ -69,7 +70,7 @@ describe("GET /api/events/:id", (): void => {
     const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
 
     const upcomingMatch: MatchResponse = await request(app)
-      .get(`/api/events/${upcomingEventId}`)
+      .get(`${getUrl(API_ROUTES.events)}/${upcomingEventId}`)
       .then(res => res.body.data);
 
     expect(upcomingMatch.id).toBe(upcomingEventId);
@@ -78,7 +79,7 @@ describe("GET /api/events/:id", (): void => {
     expect(upcomingMatch.field.id).toBe(upcomingMatchFieldId);
 
     const pastMatch: MatchResponse = await request(app)
-      .get(`/api/events/${pastEventId}`)
+      .get(`${getUrl(API_ROUTES.events)}/${pastEventId}`)
       .then(res => res.body.data);
 
     expect(pastMatch.id).toBe(pastEventId);
@@ -88,13 +89,13 @@ describe("GET /api/events/:id", (): void => {
   });
 });
 
-describe("GET /api/events", (): void => {
+describe(`GET ${getUrl(API_ROUTES.events)}`, (): void => {
   afterEach(() => {
     tearDownDb(db);
   });
 
   it("should return status 200 and the result should have a 'data' property", async (): Promise<void> => {
-    const res = await request(app).get("/api/events");
+    const res = await request(app).get(getUrl(API_ROUTES.events));
     expect(res.status).toEqual(200);
     expect(res.body).toHaveProperty("data");
   });
@@ -103,7 +104,7 @@ describe("GET /api/events", (): void => {
     const [upcomingEventId, upcomingMatchFieldId] = setupDb(db);
 
     const result = await request(app)
-      .get("/api/events")
+      .get(getUrl(API_ROUTES.events))
       .then(res => res.body.data);
 
     expect(result.length).toBe(1);
@@ -115,13 +116,13 @@ describe("GET /api/events", (): void => {
   });
 });
 
-describe("GET /api/fields", (): void => {
+describe(`GET ${getUrl(API_ROUTES.fields)}`, (): void => {
   afterEach(() => {
     tearDownDb(db);
   });
 
   it("should return status 200 and the result should have a 'data' property", async (): Promise<void> => {
-    const res = await request(app).get("/api/fields");
+    const res = await request(app).get(getUrl(API_ROUTES.fields));
     expect(res.status).toEqual(200);
     expect(res.body).toHaveProperty("data");
   });
@@ -130,7 +131,7 @@ describe("GET /api/fields", (): void => {
     const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
 
     const result = await request(app)
-      .get("/api/fields")
+      .get(getUrl(API_ROUTES.fields))
       .then(res => res.body.data);
 
     expect(result.length).toBe(2);
@@ -143,7 +144,7 @@ describe("GET /api/fields", (): void => {
     const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
 
     const result = await request(app)
-      .get(`/api/fields?search="Langholmen"`)
+      .get(`${getUrl(API_ROUTES.fields)}?search="Langholmen"`)
       .then(res => res.body.data);
 
     expect(result.length).toBe(1);

@@ -1,6 +1,6 @@
 import lowdb from "lowdb";
 import Memory from "lowdb/adapters/Memory";
-import { setupDb, tearDownDb } from "../";
+import { setupDb, tearDownDb, getUrl } from "../";
 import { Match, Field } from "../../types/database";
 
 let db: lowdb.LowdbSync<any>;
@@ -53,5 +53,13 @@ describe("setupDb", () => {
 
     db.set("events", []).write();
     db.set("fields", []).write();
+  });
+});
+
+describe("getUrl", () => {
+  it("should return endpoint with /api prefix", (): void => {
+    const endpoint = "endpoint";
+    const url = getUrl(endpoint);
+    expect(url).toBe(`/api/${endpoint}`);
   });
 });

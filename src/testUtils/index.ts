@@ -68,3 +68,5 @@ export function setupDb(db: lowdb.LowdbSync<any>): number[] {
 
   return [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId];
 }
+
+export const getUrl = (endpoint: string): string => `/api/${endpoint}`;
