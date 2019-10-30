@@ -4,5 +4,6 @@ export default {
   events: "events",
   fields: "fields",
   login: "login",
-  rsvp: "rsvp",
+  rsvps: "rsvps",
+  users: "users",
 };

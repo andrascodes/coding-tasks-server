@@ -1,14 +1,11 @@
-import lowdb from "lowdb";
+import { Database } from "../types/database";
 
-export function tearDownDb(db: lowdb.LowdbSync<any>): void {
-  db.set("events", []).write();
-  db.set("fields", []).write();
+export function tearDownDb(db: Database): void {
+  db.setEvents([]).write();
+  db.setFields([]).write();
 }
 
-export function setupDb(db: lowdb.LowdbSync<any>): number[] {
-  const events: any = db.get("events");
-  const fields: any = db.get("fields");
-
+export function setupDb(db: Database): number[] {
   const upcomingEventId = 1;
   const upcomingStart = Date.now() / 1000 + 86400;
   const upcomingMatchFieldId = 2;
@@ -16,7 +13,7 @@ export function setupDb(db: lowdb.LowdbSync<any>): number[] {
   const pastEventId = 2;
   const pastStart = Date.now() / 1000 - 86400;
 
-  events
+  db.getEvents()
     .push(
       {
         id: upcomingEventId,
@@ -35,35 +32,37 @@ export function setupDb(db: lowdb.LowdbSync<any>): number[] {
     )
     .write();
 
-  fields
-    .push({
-      id: upcomingMatchFieldId,
-      name: "Långholmens bollplan",
-      address: {
-        street: "Alstaviksvägen 9",
-        city: "Stockholm",
-        zipcode: "117 33",
-        country: "Sweden",
-        location: {
-          lat: 59.320351,
-          lng: 18.02859,
+  db.getFields()
+    .push(
+      {
+        id: upcomingMatchFieldId,
+        name: "Långholmens bollplan",
+        address: {
+          street: "Alstaviksvägen 9",
+          city: "Stockholm",
+          zipcode: "117 33",
+          country: "Sweden",
+          location: {
+            lat: 59.320351,
+            lng: 18.02859,
+          },
         },
       },
-    })
-    .push({
-      id: pastMatchFieldId,
-      name: "Axelsbergs Bollplan",
-      address: {
-        street: "Eolshällsvägen 1",
-        city: "Hägersten",
-        zipcode: "129 37",
-        country: "Sweden",
-        location: {
-          lat: 59.30566,
-          lng: 17.969849,
+      {
+        id: pastMatchFieldId,
+        name: "Axelsbergs Bollplan",
+        address: {
+          street: "Eolshällsvägen 1",
+          city: "Hägersten",
+          zipcode: "129 37",
+          country: "Sweden",
+          location: {
+            lat: 59.30566,
+            lng: 17.969849,
+          },
         },
       },
-    })
+    )
     .write();
 
   return [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId];

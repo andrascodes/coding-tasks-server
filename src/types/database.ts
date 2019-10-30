@@ -32,3 +32,18 @@ export interface MatchResponse {
   start: number;
   end: number | null;
 }
+
+export interface User {
+  id: number;
+  username: string;
+  password: string;
+}
+
+export interface Database {
+  getEvents: () => any;
+  setEvents: (value: any) => any;
+  getFields: () => any;
+  setFields: (value: any) => any;
+  getUsers: () => any;
+  getRSVPs: () => any;
+}

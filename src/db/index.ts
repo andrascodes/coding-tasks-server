@@ -1,28 +1,59 @@
 import lowdb from "lowdb";
+import Memory from "lowdb/adapters/Memory";
 import FileAsync from "lowdb/adapters/FileAsync";
 import FIELDS from "./fields";
 import EVENTS from "./events";
-import { Schema } from "../types/database";
+import API_ROUTES from "../constants/apiRoutes";
+import { Database } from "../types/database";
 
-// // Set some defaults (required if your JSON file is empty)
-// db.defaults({ posts: [], user: {}, count: 0 }).write();
+function createResponse(db: any): Database {
+  return {
+    getEvents(): any {
+      const eventsDbObject: any = db.get(API_ROUTES.events);
+      return eventsDbObject;
+    },
+    setEvents(value): any {
+      return db.set(API_ROUTES.events, value);
+    },
+    getFields(): any {
+      const fieldsDbObject: any = db.get(API_ROUTES.fields);
+      return fieldsDbObject;
+    },
+    setFields(value): any {
+      return db.set(API_ROUTES.fields, value);
+    },
+    getUsers(): any {
+      const usersDbObject: any = db.get(API_ROUTES.users);
+      return usersDbObject;
+    },
+    getRSVPs(): any {
+      const rsvpDbObject: any = db.get(API_ROUTES.rsvps);
+      return rsvpDbObject;
+    },
+  };
+}
 
-// // Add a post
-// db.get("posts")
-//   .push({ id: 1, title: "lowdb is awesome" })
-//   .write();
+export default async function createDB(options = { test: false }): Promise<Database> {
+  if (options.test) {
+    const adapter = new Memory("");
+    const db = lowdb(adapter);
 
-// // Set a user using Lodash shorthand syntax
-// db.set("user.name", "typicode").write();
-
-// // Increment count
-// db.update("count", n => n + 1).write();
-
-export default async function createDB(): Promise<lowdb.LowdbAsync<Schema>> {
+    db.defaults({
+      [`${API_ROUTES.events}`]: [],
+      [`${API_ROUTES.fields}`]: [],
+      [`${API_ROUTES.users}`]: [],
+      [`${API_ROUTES.rsvps}`]: [],
+    }).write();
+    return createResponse(db);
+  }
   const adapter = new FileAsync("./db.json");
   const db = await lowdb(adapter);
 
-  db.defaults({ events: EVENTS, fields: FIELDS }).write();
-
-  return db;
+  db.defaults({
+    [`${API_ROUTES.events}`]: EVENTS,
+    [`${API_ROUTES.fields}`]: FIELDS,
+    [`${API_ROUTES.users}`]: [],
+    [`${API_ROUTES.rsvps}`]: [],
+  }).write();
+  return createResponse(db);
 }

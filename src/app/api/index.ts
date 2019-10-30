@@ -1,11 +1,11 @@
-import express from "express";
-import * as lowdb from "lowdb";
+import express, { Response } from "express";
+import bcrypt from "bcrypt";
 import { ExpressError } from "../../types/utils";
-import { Match, Field, MatchResponse } from "../../types/database";
+import { Match, Field, MatchResponse, User, Database } from "../../types/database";
 import API_ROUTES from "../../constants/apiRoutes";
 
 interface ApiRouterArguments {
-  db: lowdb.LowdbAsync<any> | lowdb.LowdbSync<any>;
+  db: Database;
 }
 
 export default function createApiRouter({ db }: ApiRouterArguments): express.Router {
@@ -27,10 +27,11 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
   apiRouter.get(
     `/${API_ROUTES.events}`,
     (req, res): Response => {
-      const eventsDbObject: any = db.get(API_ROUTES.events);
-
-      const events: Match[] = eventsDbObject.filter((event: Match) => event.start * 1000 >= Date.now()).value();
-      const fields: Field[] = db.get(API_ROUTES.fields).value();
+      const events: Match[] = db
+        .getEvents()
+        .filter((event: Match) => event.start * 1000 >= Date.now())
+        .value();
+      const fields: Field[] = db.getFields().value();
 
       const data: MatchResponse[] = events.map((event: Match) => {
         const { fieldId, ...restOfEvent } = event;
@@ -64,8 +65,10 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
     (req, res): Response => {
       const { id } = req.params;
 
-      const eventsDbObject: any = db.get(API_ROUTES.events);
-      const event: Match = eventsDbObject.find((eventObj: Match) => `${eventObj.id}` === `${id}`).value();
+      const event: Match = db
+        .getEvents()
+        .find((eventObj: Match) => `${eventObj.id}` === `${id}`)
+        .value();
 
       if (!event) {
         return res.status(404).format({
@@ -80,11 +83,13 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
           },
         });
       }
-      const fields: Field[] = db.get(API_ROUTES.fields).value();
+      const fields: Field[] = db.getFields().value();
 
       const { fieldId, ...restOfEvent } = event;
       const data: MatchResponse = {
         ...restOfEvent,
+        // When using proper database, the field will be specified,
+        // so there is no need to return a default field e.g.: { id:2 ...}
         field: fields.find((field: Field) => field.id === fieldId) || {
           id: 2,
           name: "Långholmens bollplan",
@@ -113,7 +118,7 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
       const searchString =
         req.query.search && req.query.search.includes('"') ? req.query.search.split('"')[1] : req.query.search;
 
-      const fields: Field[] = db.get(API_ROUTES.fields).value();
+      const fields: Field[] = db.getFields().value();
 
       if (!searchString) {
         return res.status(200).json({
@@ -131,6 +136,68 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
             .includes(searchString.toUpperCase());
         }),
       });
+    },
+  );
+
+  apiRouter.post(
+    `/${API_ROUTES.login}`,
+    (req, res): Response => {
+      const authHeader = req.header("Authorization");
+      const encodedUsernamePassword = authHeader && authHeader.split("Basic ")[1];
+
+      if (!encodedUsernamePassword) {
+        return res.status(400).format({
+          // html() {
+          //   res.render("400", { url: req.url });
+          // },
+          json() {
+            res.json({ error: "Bad Request" });
+          },
+          default() {
+            res.type("txt").send("Bad Request");
+          },
+        });
+      }
+
+      const usernamePasswordBuffer = Buffer.from(encodedUsernamePassword, "base64");
+      const usernamePassword = usernamePasswordBuffer && usernamePasswordBuffer.toString();
+      const [username, password] = usernamePassword.split(":");
+
+      if (!username || !password) {
+        return res.status(400).format({
+          // html() {
+          //   res.render("400", { url: req.url });
+          // },
+          json() {
+            res.json({ error: "Bad Request" });
+          },
+          default() {
+            res.type("txt").send("Bad Request");
+          },
+        });
+      }
+
+      const user: User = db
+        .getUsers()
+        .find((userObj: User) => userObj.username === username)
+        .value();
+
+      if (!user) {
+        // TODO: create new user with hashed pw
+      }
+
+      // TODO: check hashed password
+
+      // if wrong pw: Username or Password incorrect
+      // if good pw: return id + pw
+
+      return res.status(200).json({
+        data: {
+          token: "",
+        },
+      });
+    },
+  );
 
   return apiRouter;
 }

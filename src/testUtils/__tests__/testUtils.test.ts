@@ -1,47 +1,45 @@
 import lowdb from "lowdb";
 import Memory from "lowdb/adapters/Memory";
 import { setupDb, tearDownDb, getUrl } from "../";
-import { Match, Field } from "../../types/database";
+import { Match, Field, Database } from "../../types/database";
+import createDB from "../../db";
 
-let db: lowdb.LowdbSync<any>;
+let db: Database;
 
-beforeAll((): void => {
-  const adapter = new Memory("");
-  db = lowdb(adapter);
-
-  db.defaults({
-    events: [],
-    fields: [],
-  }).write();
-});
+beforeAll(
+  async (): Promise<void> => {
+    db = await createDB({ test: true });
+  },
+);
 
 describe("tearDownDb", () => {
   it("should empty out DB", (): void => {
-    const events: any = db.get("events");
-    const fields: any = db.get("fields");
+    db.getEvents()
+      .push({ id: "test" })
+      .write();
+    db.getFields()
+      .push({ id: "test" })
+      .write();
 
-    events.push({ id: "test" }).write();
-    fields.push({ id: "test" }).write();
-
-    expect(db.get("events").value().length).toBeGreaterThan(0);
-    expect(db.get("fields").value().length).toBeGreaterThan(0);
+    expect(db.getEvents().value().length).toBeGreaterThan(0);
+    expect(db.getFields().value().length).toBeGreaterThan(0);
 
     tearDownDb(db);
 
-    expect(db.get("events").value().length).toEqual(0);
-    expect(db.get("fields").value().length).toEqual(0);
+    expect(db.getEvents().value().length).toEqual(0);
+    expect(db.getFields().value().length).toEqual(0);
   });
 });
 
 describe("setupDb", () => {
   it("should add test data to DB", (): void => {
-    db.set("events", []).write();
-    db.set("fields", []).write();
+    db.setEvents([]).write();
+    db.setFields([]).write();
 
     const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
 
-    const events = db.get("events").value();
-    const fields = db.get("fields").value();
+    const events = db.getEvents().value();
+    const fields = db.getFields().value();
 
     const eventIds = events.map((event: Match) => event.id);
     const fieldIds = fields.map((field: Field) => field.id);
@@ -51,8 +49,8 @@ describe("setupDb", () => {
     expect(fieldIds).toContain(upcomingMatchFieldId);
     expect(fieldIds).toContain(pastMatchFieldId);
 
-    db.set("events", []).write();
-    db.set("fields", []).write();
+    db.setEvents([]).write();
+    db.setFields([]).write();
   });
 });
 

@@ -1,27 +1,21 @@
 import request from "supertest";
 import express from "express";
 import createApp from "../app";
-import lowdb from "lowdb";
-import Memory from "lowdb/adapters/Memory";
-import { MatchResponse, Field } from "../types/database";
+import { MatchResponse, Field, Database } from "../types/database";
 import { tearDownDb, setupDb, getUrl } from "../testUtils";
 import API_ROUTES from "../constants/apiRoutes";
+import createDB from "../db";
 
 let app: express.Application;
 const port = "8080";
-let db: lowdb.LowdbSync<any>;
+let db: Database;
 
-beforeAll((): void => {
-  const adapter = new Memory("");
-  db = lowdb(adapter);
-
-  db.defaults({
-    [`${API_ROUTES.events}`]: [],
-    [`${API_ROUTES.fields}`]: [],
-  }).write();
-
-  app = createApp({ port, db });
-});
+beforeAll(
+  async (): Promise<void> => {
+    db = await createDB({ test: true });
+    app = createApp({ port, db });
+  },
+);
 
 describe(`GET ${getUrl(API_ROUTES.healthcheck)}`, (): void => {
   it("should return status 200", async (): Promise<void> => {
@@ -152,4 +146,57 @@ describe(`GET ${getUrl(API_ROUTES.fields)}`, (): void => {
     expect(fieldIds).toContain(upcomingMatchFieldId);
     expect(fieldIds).not.toContain(pastMatchFieldId);
   });
+});
+
+describe(`POST ${getUrl(API_ROUTES.login)}`, (): void => {
+  afterEach(() => {
+    tearDownDb(db);
+  });
+
+  it("should return status 200 and the result should have a 'data/token' properties", async (): Promise<void> => {
+    const res = await request(app)
+      .post(getUrl(API_ROUTES.login))
+      .set("Authorization", `Basic ${Buffer.from("testuser:testpassword").toString("base64")}`);
+    expect(res.status).toEqual(200);
+    expect(res.body).toHaveProperty("data");
+    expect(res.body.data).toHaveProperty("token");
+  });
+
+  it("should create user in database if it does not exist", (): void => {});
+
+  it("should return user in database if exists and password matches", (): void => {});
+
+  it("should return 400 if request has no Authorization header or the header is invalid", (): void => {});
+
+  it("should return 401 if user exists but password does not match", (): void => {});
+
+  // it("", (): void => {
+
+  // })
+
+  // it("should return all fields if query param is omitted", async (): Promise<void> => {
+  //   const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
+
+  //   const result = await request(app)
+  //     .get("/api/fields")
+  //     .then(res => res.body.data);
+
+  //   expect(result.length).toBe(2);
+  //   const fieldIds = result.map((field: Field) => field.id);
+  //   expect(fieldIds).toContain(upcomingMatchFieldId);
+  //   expect(fieldIds).toContain(pastMatchFieldId);
+  // });
+
+  // it("should only return fields that match the query param", async (): Promise<void> => {
+  //   const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
+
+  //   const result = await request(app)
+  //     .get(`/api/fields?search="Langholmen"`)
+  //     .then(res => res.body.data);
+
+  //   expect(result.length).toBe(1);
+  //   const fieldIds = result.map((field: Field) => field.id);
+  //   expect(fieldIds).toContain(upcomingMatchFieldId);
+  //   expect(fieldIds).not.toContain(pastMatchFieldId);
+  // });
 });

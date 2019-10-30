@@ -1,11 +1,11 @@
 import express from "express";
-import lowdb from "lowdb";
 import { ExpressError } from "../types/utils";
 import createApiRouter from "./api";
+import { Database } from "../types/database";
 
 interface CreateAppArguments {
   port: string | undefined;
-  db: lowdb.LowdbAsync<any> | lowdb.LowdbSync<any>;
+  db: Database;
 }
 
 export default function createApp({ port, db }: CreateAppArguments): express.Application {
