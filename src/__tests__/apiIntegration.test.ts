@@ -1,7 +1,7 @@
 import request from "supertest";
 import express from "express";
 import createApp from "../app";
-import { MatchResponse, Field, Database } from "../types/database";
+import { MatchResponse, Field, Database, User } from "../types/database";
 import { tearDownDb, setupDb, getUrl } from "../testUtils";
 import API_ROUTES from "../constants/apiRoutes";
 import createDB from "../db";
@@ -162,41 +162,50 @@ describe(`POST ${getUrl(API_ROUTES.login)}`, (): void => {
     expect(res.body.data).toHaveProperty("token");
   });
 
-  it("should create user in database if it does not exist", (): void => {});
+  it("should create user in database if it does not exist", async (): Promise<void> => {
+    const username = "testuser";
+    const res = await request(app)
+      .post(getUrl(API_ROUTES.login))
+      .set("Authorization", `Basic ${Buffer.from(`${username}:testpassword`).toString("base64")}`);
 
-  it("should return user in database if exists and password matches", (): void => {});
+    const users = db.getUsers().value();
+    expect(users.length).toBeGreaterThan(0);
+    expect(users.map((user: User) => user.username)).toContain(username);
+  });
 
-  it("should return 400 if request has no Authorization header or the header is invalid", (): void => {});
+  it("should return user in database if exists and password matches", async (): Promise<void> => {
+    const username = "testuser";
+    const password = "testpassword";
 
-  it("should return 401 if user exists but password does not match", (): void => {});
+    const { id: savedId, password: savedPassword } = await db.createUser({ username, password });
+    expect(db.getUsers().value().length).toBe(1);
 
-  // it("", (): void => {
+    const res = await request(app)
+      .post(getUrl(API_ROUTES.login))
+      .set("Authorization", `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`);
 
-  // })
+    expect(db.getUsers().value().length).toBe(1);
+    expect(res.body.data.id).toBe(savedId);
+    expect(res.body.data.token).toBe(savedPassword);
+  });
 
-  // it("should return all fields if query param is omitted", async (): Promise<void> => {
-  //   const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
+  it("should return 401 if user exists but password does not match", async (): Promise<void> => {
+    const username = "testuser";
+    const password = "testpassword";
 
-  //   const result = await request(app)
-  //     .get("/api/fields")
-  //     .then(res => res.body.data);
+    await db.createUser({ username, password });
+    expect(db.getUsers().value().length).toBe(1);
 
-  //   expect(result.length).toBe(2);
-  //   const fieldIds = result.map((field: Field) => field.id);
-  //   expect(fieldIds).toContain(upcomingMatchFieldId);
-  //   expect(fieldIds).toContain(pastMatchFieldId);
-  // });
+    const res = await request(app)
+      .post(getUrl(API_ROUTES.login))
+      .set("Authorization", `Basic ${Buffer.from(`${username}:wrongpassword`).toString("base64")}`);
 
-  // it("should only return fields that match the query param", async (): Promise<void> => {
-  //   const [upcomingEventId, upcomingMatchFieldId, pastEventId, pastMatchFieldId] = setupDb(db);
+    expect(res.status).toEqual(401);
+    expect(db.getUsers().value().length).toBe(1);
+  });
 
-  //   const result = await request(app)
-  //     .get(`/api/fields?search="Langholmen"`)
-  //     .then(res => res.body.data);
-
-  //   expect(result.length).toBe(1);
-  //   const fieldIds = result.map((field: Field) => field.id);
-  //   expect(fieldIds).toContain(upcomingMatchFieldId);
-  //   expect(fieldIds).not.toContain(pastMatchFieldId);
-  // });
+  it("should return 400 if request has no Authorization header or the header is invalid", async (): Promise<void> => {
+    const res = await request(app).post(getUrl(API_ROUTES.login));
+    expect(res.status).toEqual(400);
+  });
 });

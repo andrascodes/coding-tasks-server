@@ -3,6 +3,7 @@ import { Database } from "../types/database";
 export function tearDownDb(db: Database): void {
   db.setEvents([]).write();
   db.setFields([]).write();
+  db.setUsers([]).write();
 }
 
 export function setupDb(db: Database): number[] {

@@ -34,7 +34,13 @@ export interface MatchResponse {
 }
 
 export interface User {
-  id: number;
+  id: string;
+  username: string;
+  password: string;
+  initializationVector: string;
+}
+
+export interface AuthInput {
   username: string;
   password: string;
 }
@@ -45,5 +51,8 @@ export interface Database {
   getFields: () => any;
   setFields: (value: any) => any;
   getUsers: () => any;
+  setUsers: (value: any) => any;
   getRSVPs: () => any;
+  createUser: (input: AuthInput) => Promise<User>;
+  authenticateUser: (input: AuthInput) => Promise<[boolean | User, boolean]>;
 }

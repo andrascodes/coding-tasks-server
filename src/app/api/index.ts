@@ -1,5 +1,4 @@
 import express, { Response } from "express";
-import bcrypt from "bcrypt";
 import { ExpressError } from "../../types/utils";
 import { Match, Field, MatchResponse, User, Database } from "../../types/database";
 import API_ROUTES from "../../constants/apiRoutes";
@@ -141,7 +140,7 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
 
   apiRouter.post(
     `/${API_ROUTES.login}`,
-    (req, res): Response => {
+    async (req, res): Promise<Response> => {
       const authHeader = req.header("Authorization");
       const encodedUsernamePassword = authHeader && authHeader.split("Basic ")[1];
 
@@ -177,23 +176,38 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
         });
       }
 
-      const user: User = db
-        .getUsers()
-        .find((userObj: User) => userObj.username === username)
-        .value();
+      const [userExists, passwordsMatch] = await db.authenticateUser({ username, password });
 
-      if (!user) {
-        // TODO: create new user with hashed pw
+      if (!userExists) {
+        const savedUser = await db.createUser({ username, password });
+
+        return res.status(200).json({
+          data: {
+            id: savedUser.id,
+            token: savedUser.password,
+          },
+        });
       }
 
-      // TODO: check hashed password
+      const user = userExists as User;
 
-      // if wrong pw: Username or Password incorrect
-      // if good pw: return id + pw
-
+      if (!passwordsMatch) {
+        return res.status(401).format({
+          // html() {
+          //   res.render("401", { url: req.url });
+          // },
+          json() {
+            res.json({ error: "Incorrect username or password" });
+          },
+          default() {
+            res.type("txt").send("Incorrect username or password");
+          },
+        });
+      }
       return res.status(200).json({
         data: {
-          token: "",
+          id: user.id,
+          token: user.password,
         },
       });
     },

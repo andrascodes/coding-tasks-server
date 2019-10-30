@@ -1,12 +1,19 @@
 import lowdb from "lowdb";
 import Memory from "lowdb/adapters/Memory";
 import FileAsync from "lowdb/adapters/FileAsync";
+import bcrypt from "bcrypt";
+import { v1 as uuid } from "uuid";
 import FIELDS from "./fields";
 import EVENTS from "./events";
 import API_ROUTES from "../constants/apiRoutes";
-import { Database } from "../types/database";
+import { Database, User, AuthInput } from "../types/database";
 
 function createResponse(db: any): Database {
+  function getUsers(): any {
+    const usersDbObject: any = db.get(API_ROUTES.users);
+    return usersDbObject;
+  }
+
   return {
     getEvents(): any {
       const eventsDbObject: any = db.get(API_ROUTES.events);
@@ -22,13 +29,43 @@ function createResponse(db: any): Database {
     setFields(value): any {
       return db.set(API_ROUTES.fields, value);
     },
-    getUsers(): any {
-      const usersDbObject: any = db.get(API_ROUTES.users);
-      return usersDbObject;
+    getUsers,
+    setUsers(value): any {
+      return db.set(API_ROUTES.users, value);
     },
     getRSVPs(): any {
       const rsvpDbObject: any = db.get(API_ROUTES.rsvps);
       return rsvpDbObject;
+    },
+    async createUser({ username, password }: AuthInput): Promise<User> {
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newUser = {
+        id: uuid(),
+        username,
+        password: hashedPassword,
+      };
+
+      getUsers()
+        .push(newUser)
+        .write();
+
+      const savedUser = getUsers()
+        .find((userObj: User) => userObj.id === newUser.id)
+        .value();
+
+      return savedUser;
+    },
+    async authenticateUser({ username, password }: AuthInput): Promise<[boolean | User, boolean]> {
+      const user: User = getUsers()
+        .find((userObj: User) => userObj.username === username)
+        .value();
+      if (!user) return [false, false];
+
+      const passwordsMatch = await bcrypt.compare(password, user.password);
+      if (!passwordsMatch) return [true, false];
+
+      return [user, true];
     },
   };
 }
