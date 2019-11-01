@@ -1,5 +1,6 @@
 import express from "express";
 import { ExpressError } from "../types/utils";
+import createEncryptedRouter from "./encrypted";
 import createApiRouter from "./api";
 import { Database } from "../types/database";
 
@@ -12,7 +13,10 @@ export default function createApp({ port, db }: CreateAppArguments): express.App
   const app = express();
   app.set("port", port);
 
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
   app.use("/api", createApiRouter({ db }));
+  app.use("/encrypted", createEncryptedRouter({ db }));
 
   // Non-existing route handler
   app.use((req, res, next) => {

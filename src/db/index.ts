@@ -2,7 +2,7 @@ import lowdb from "lowdb";
 import Memory from "lowdb/adapters/Memory";
 import FileAsync from "lowdb/adapters/FileAsync";
 import bcrypt from "bcrypt";
-import { v1 as uuid } from "uuid";
+import shortid from "shortid";
 import FIELDS from "./fields";
 import EVENTS from "./events";
 import API_ROUTES from "../constants/apiRoutes";
@@ -37,11 +37,15 @@ function createResponse(db: any): Database {
       const rsvpDbObject: any = db.get(API_ROUTES.rsvps);
       return rsvpDbObject;
     },
+    getPosts(): any {
+      const postsDbObject: any = db.get(API_ROUTES.posts);
+      return postsDbObject;
+    },
     async createUser({ username, password }: AuthInput): Promise<User> {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const newUser = {
-        id: uuid(),
+        id: shortid.generate(),
         username,
         password: hashedPassword,
       };
@@ -71,26 +75,28 @@ function createResponse(db: any): Database {
 }
 
 export default async function createDB(options = { test: false }): Promise<Database> {
+  const INTITIAL_DB_STATE = {
+    [`${API_ROUTES.events}`]: [],
+    [`${API_ROUTES.fields}`]: [],
+    [`${API_ROUTES.users}`]: [],
+    [`${API_ROUTES.rsvps}`]: [],
+    [`${API_ROUTES.posts}`]: [],
+  };
+
   if (options.test) {
     const adapter = new Memory("");
     const db = lowdb(adapter);
 
-    db.defaults({
-      [`${API_ROUTES.events}`]: [],
-      [`${API_ROUTES.fields}`]: [],
-      [`${API_ROUTES.users}`]: [],
-      [`${API_ROUTES.rsvps}`]: [],
-    }).write();
+    db.defaults({ ...INTITIAL_DB_STATE }).write();
     return createResponse(db);
   }
   const adapter = new FileAsync("./db.json");
   const db = await lowdb(adapter);
 
   db.defaults({
+    ...INTITIAL_DB_STATE,
     [`${API_ROUTES.events}`]: EVENTS,
     [`${API_ROUTES.fields}`]: FIELDS,
-    [`${API_ROUTES.users}`]: [],
-    [`${API_ROUTES.rsvps}`]: [],
   }).write();
   return createResponse(db);
 }
