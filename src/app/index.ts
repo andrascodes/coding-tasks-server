@@ -1,8 +1,10 @@
 import express from "express";
+import morgan from "morgan";
 import { ExpressError } from "../types/utils";
 import createEncryptedRouter from "./encrypted";
 import createApiRouter from "./api";
 import { Database } from "../types/database";
+import logger from "../config/winston";
 
 interface CreateAppArguments {
   port: string | undefined;
@@ -12,6 +14,20 @@ interface CreateAppArguments {
 export default function createApp({ port, db }: CreateAppArguments): express.Application {
   const app = express();
   app.set("port", port);
+
+  app.use(
+    morgan(process.env.NODE_ENV !== "development" ? "combined" : "dev", {
+      skip: (req, res) => res.statusCode < 400,
+      stream: { write: message => logger.error(message.trim()) },
+    }),
+  );
+
+  app.use(
+    morgan(process.env.NODE_ENV !== "development" ? "combined" : "dev", {
+      skip: (req, res) => res.statusCode >= 400,
+      stream: { write: message => logger.info(message.trim()) },
+    }),
+  );
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));

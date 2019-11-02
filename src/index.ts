@@ -1,16 +1,15 @@
 import express from "express";
 import net from "net";
-import dotenv from "dotenv";
 import createApp from "./app";
 import createDB from "./db";
+
+import logger from "./config/winston";
 
 interface MainReturnType {
   app: express.Application;
   server: net.Server;
   getPort(): string;
 }
-
-dotenv.config();
 
 async function main(): Promise<MainReturnType> {
   const db = await createDB();
@@ -31,6 +30,6 @@ async function main(): Promise<MainReturnType> {
 
 main()
   .then(({ getPort }) => {
-    console.log(`Server is listening on ${getPort()}`);
+    logger.info(`Server is listening on ${getPort()}`);
   })
   .catch(console.error);

@@ -3,13 +3,13 @@ import CryptoJS from "crypto-js";
 import { ExpressError } from "../../types/utils";
 import { Database, Post } from "../../types/database";
 import API_ROUTES from "../../constants/apiRoutes";
+import logger from "../../config/winston";
 
 const ERRORS = {
   wrongDecryptionKey: { message: "Please specify the decryption key in the Authorization header!", code: 401 },
   wrongRequestBody: { message: "Please specify the value property on the request body!", code: 400 },
   missingEncryptionKey: { message: "Please specify the encryption key in the Authorization header!", code: 401 },
   resourceNotFound: { message: "Resource with the specified 'id' was not found.", code: 404 },
-  serverError: { message: "Server error", code: 500 },
 };
 
 interface CreateErrorResponseArguments {
@@ -75,7 +75,7 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
         const decryptedPosts = requestedPosts.reduce((acc: Post[], post: Post) => {
           const decryptedValue = CryptoJS.AES.decrypt(post.value, decryptionKey).toString(CryptoJS.enc.Utf8);
           if (decryptedValue.length <= 0) {
-            // TODO: Log server error
+            logger.error(`Failed to decrypt resource with id: "${post.id}", using the key: "${decryptionKey}"`);
             return acc;
           }
           acc.push({
@@ -92,8 +92,8 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
           })),
         );
       } catch (error) {
-        console.error(error);
-        return sendErrorResponse(ERRORS.serverError, res);
+        logger.error(error);
+        throw error;
       }
     },
   );
@@ -140,8 +140,8 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
           result: "success",
         });
       } catch (error) {
-        console.error(error);
-        return sendErrorResponse(ERRORS.serverError, res);
+        logger.error(error);
+        throw error;
       }
     },
   );
