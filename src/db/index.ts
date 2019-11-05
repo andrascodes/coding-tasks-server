@@ -37,9 +37,12 @@ function createResponse(db: any): Database {
       const rsvpDbObject: any = db.get(API_ROUTES.rsvps);
       return rsvpDbObject;
     },
-    getPosts(): any {
-      const postsDbObject: any = db.get(API_ROUTES.posts);
+    getItems(): any {
+      const postsDbObject: any = db.get(API_ROUTES.items);
       return postsDbObject;
+    },
+    setItems(value): any {
+      return db.set(API_ROUTES.items, value);
     },
     async createUser({ username, password }: AuthInput): Promise<User> {
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -80,7 +83,7 @@ export default async function createDB(options = { test: false }): Promise<Datab
     [`${API_ROUTES.fields}`]: [],
     [`${API_ROUTES.users}`]: [],
     [`${API_ROUTES.rsvps}`]: [],
-    [`${API_ROUTES.posts}`]: [],
+    [`${API_ROUTES.items}`]: [],
   };
 
   if (options.test) {

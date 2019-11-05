@@ -1,7 +1,7 @@
 import express, { Response } from "express";
 import CryptoJS from "crypto-js";
 import { ExpressError } from "../../types/utils";
-import { Database, Post } from "../../types/database";
+import { Database, Item } from "../../types/database";
 import API_ROUTES from "../../constants/apiRoutes";
 import logger from "../../config/winston";
 
@@ -59,20 +59,20 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
 
       const { id } = req.params;
 
-      const requestedPosts: Post[] = db
-        .getPosts()
-        .filter((post: Post) => {
+      const requestedItems: Item[] = db
+        .getItems()
+        .filter((post: Item) => {
           if (id === "*") return true;
           return post.id === id;
         })
         .value();
 
-      if (requestedPosts.length <= 0) {
+      if (requestedItems.length <= 0) {
         return sendErrorResponse(ERRORS.resourceNotFound, res);
       }
 
       try {
-        const decryptedPosts = requestedPosts.reduce((acc: Post[], post: Post) => {
+        const decryptedItems = requestedItems.reduce((acc: Item[], post: Item) => {
           const decryptedValue = CryptoJS.AES.decrypt(post.value, decryptionKey).toString(CryptoJS.enc.Utf8);
           if (decryptedValue.length <= 0) {
             logger.error(`Failed to decrypt resource with id: "${post.id}", using the key: "${decryptionKey}"`);
@@ -86,7 +86,7 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
         }, []);
 
         return res.status(200).json(
-          decryptedPosts.map((post: Post) => ({
+          decryptedItems.map((post: Item) => ({
             id: post.id,
             value: JSON.parse(post.value),
           })),
@@ -117,22 +117,22 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
       try {
         const encryptedValue = CryptoJS.AES.encrypt(JSON.stringify(value), encryptionKey).toString();
 
-        const newPost: Post = { id, value: encryptedValue };
+        const newItem: Item = { id, value: encryptedValue };
 
-        const postInDb = db
-          .getPosts()
+        const itemInDb = db
+          .getItems()
           .find({ id })
           .value();
 
-        if (!postInDb) {
-          db.getPosts()
-            .push(newPost)
+        if (!itemInDb) {
+          db.getItems()
+            .push(newItem)
             .write();
         }
 
-        db.getPosts()
+        db.getItems()
           .find({ id })
-          .assign(newPost)
+          .assign(newItem)
           .write();
 
         return res.status(200).json({

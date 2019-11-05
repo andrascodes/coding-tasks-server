@@ -6,5 +6,5 @@ export default {
   login: "login",
   rsvps: "rsvps",
   users: "users",
-  posts: "posts",
+  items: "items",
 };

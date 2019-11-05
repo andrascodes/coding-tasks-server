@@ -45,7 +45,7 @@ export interface AuthInput {
   password: string;
 }
 
-export interface Post {
+export interface Item {
   id: string;
   value: string;
 }
@@ -58,7 +58,8 @@ export interface Database {
   getUsers: () => any;
   setUsers: (value: any) => any;
   getRSVPs: () => any;
-  getPosts: () => any;
+  getItems: () => any;
+  setItems: (value: any) => any;
   createUser: (input: AuthInput) => Promise<User>;
   authenticateUser: (input: AuthInput) => Promise<[boolean | User, boolean]>;
 }
