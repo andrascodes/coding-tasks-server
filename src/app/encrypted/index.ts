@@ -4,23 +4,18 @@ import { ExpressError } from "../../types/utils";
 import { Database, Item } from "../../types/database";
 import API_ROUTES from "../../constants/apiRoutes";
 import logger from "../../config/winston";
-
-const ERRORS = {
-  wrongDecryptionKey: { message: "Please specify the decryption key in the Authorization header!", code: 401 },
-  wrongRequestBody: { message: "Please specify the value property on the request body!", code: 400 },
-  missingEncryptionKey: { message: "Please specify the encryption key in the Authorization header!", code: 401 },
-  resourceNotFound: { message: "Resource with the specified 'id' was not found.", code: 404 },
-};
+import { ENCRYPTED_ROUTE_ERRORS as ERRORS } from "../../constants/errors";
 
 interface CreateErrorResponseArguments {
   message: string;
-  code: number;
+  statusCode: number;
+  code: string;
 }
 
-function sendErrorResponse({ message, code }: CreateErrorResponseArguments, res: Response): Response {
-  return res.status(code).format({
+function sendErrorResponse({ message, statusCode, code }: CreateErrorResponseArguments, res: Response): Response {
+  return res.status(statusCode).format({
     json() {
-      res.json({ error: message });
+      res.json({ error: message, code });
     },
     default() {
       res.type("txt").send(message);
@@ -54,7 +49,7 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
       const decryptionKey = req.header("Authorization");
 
       if (!decryptionKey) {
-        return sendErrorResponse(ERRORS.wrongDecryptionKey, res);
+        return sendErrorResponse(ERRORS.missingDecryptionKey, res);
       }
 
       const { id } = req.params;
