@@ -14,6 +14,7 @@ const logger = createLogger({
   ),
   transports: [
     new transports.Console({
+      silent: process.env.LOG_LEVEL === "none",
       format: format.combine(format.colorize(), format.simple()),
     }),
   ],

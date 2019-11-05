@@ -12,7 +12,7 @@
     "lint": "eslint --fix ./src/**/*",
     "dev": "./node_modules/.bin/nf start -j Procfile.dev",
     "dev:debug": "ts-node-dev --inspect=4321 --respawn --transpileOnly src/index.ts",
-    "test": "jest --watch"
+    "test": "LOG_LEVEL=none jest --watch"
   },
   "devDependencies": {
     "@types/bcrypt": "^3.0.0",
