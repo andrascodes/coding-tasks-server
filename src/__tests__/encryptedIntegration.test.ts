@@ -1,12 +1,12 @@
 import request from "supertest";
 import express from "express";
+import CryptoJS from "crypto-js";
 import createApp from "../app";
 import { Database, Item } from "../types/database";
 import { tearDownDb, setupDb } from "../testUtils";
 import createDB from "../db";
 import { ENCRYPTED_ROUTE_ERRORS as ERRORS } from "../constants/errors";
 import API_ROUTES from "../constants/apiRoutes";
-import CryptoJS from "crypto-js";
 
 const createUrl = (endpoint: string): string => `/encrypted/${endpoint}`;
 
@@ -129,7 +129,7 @@ describe(`GET ${createUrl(API_ROUTES.items)}/:id`, (): void => {
     tearDownDb(db);
   });
 
-  it("should return missingEncryptionKey error if Authorization header is missing", async (): Promise<void> => {
+  it("should return missingDecryptionKey error if Authorization header is missing", async (): Promise<void> => {
     const itemId = "1";
     const res = await request(app).get(`${createUrl(API_ROUTES.items)}/${itemId}`);
     expect(res.status).toEqual(401);
