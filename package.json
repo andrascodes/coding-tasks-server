@@ -7,8 +7,10 @@
   "author": "Andras Szucs <andrew0szucs@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "yarn build && node ./dist/index.js",
     "build": "rm -rf dist && tsc",
+    "postinstall": "yarn run build",
+    "serve": "node ./dist/index.js",
+    "start": "yarn run serve",
     "lint": "eslint --fix ./src/**/*",
     "dev": "./node_modules/.bin/nf start -j Procfile.dev",
     "dev:debug": "ts-node-dev --inspect=4321 --respawn --transpileOnly src/index.ts",
