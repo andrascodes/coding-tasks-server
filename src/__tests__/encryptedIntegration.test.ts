@@ -5,7 +5,7 @@ import createApp from "../app";
 import { Database, Item } from "../types/database";
 import { tearDownDb, setupDb } from "../testUtils";
 import createDB from "../db";
-import { ENCRYPTED_ROUTE_ERRORS as ERRORS } from "../constants/errors";
+import ERRORS from "../constants/errors";
 import API_ROUTES from "../constants/apiRoutes";
 
 const createUrl = (endpoint: string): string => `/encrypted/${endpoint}`;

@@ -4,24 +4,8 @@ import { ExpressError } from "../../types/utils";
 import { Database, Item } from "../../types/database";
 import API_ROUTES from "../../constants/apiRoutes";
 import logger from "../../config/winston";
-import { ENCRYPTED_ROUTE_ERRORS as ERRORS } from "../../constants/errors";
-
-interface CreateErrorResponseArguments {
-  message: string;
-  statusCode: number;
-  code: string;
-}
-
-function sendErrorResponse({ message, statusCode, code }: CreateErrorResponseArguments, res: Response): Response {
-  return res.status(statusCode).format({
-    json() {
-      res.json({ error: message, code });
-    },
-    default() {
-      res.type("txt").send(message);
-    },
-  });
-}
+import ERRORS from "../../constants/errors";
+import sendErrorResponse from "../utils/sendErrorResponse";
 
 interface ApiRouterArguments {
   db: Database;
@@ -39,17 +23,18 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
     },
   );
 
-  encryptedRouter.get(`/${API_ROUTES.errorcheck}`, (): void => {
-    throw new ExpressError(500);
+  encryptedRouter.get(`/${API_ROUTES.errorcheck}`, (req, res, next): void => {
+    next(new ExpressError(500));
   });
 
   encryptedRouter.get(
     "/items/:id",
-    async (req, res): Promise<Response> => {
+    async (req, res, next): Promise<void> => {
       const decryptionKey = req.header("Authorization");
 
       if (!decryptionKey) {
-        return sendErrorResponse(ERRORS.missingDecryptionKey, res);
+        sendErrorResponse(ERRORS.missingDecryptionKey, res);
+        return;
       }
 
       const { id } = req.params;
@@ -63,7 +48,8 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
         .value();
 
       if (requestedItems.length <= 0) {
-        return sendErrorResponse(ERRORS.resourceNotFound, res);
+        sendErrorResponse(ERRORS.resourceNotFound, res);
+        return;
       }
 
       try {
@@ -80,33 +66,36 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
           return acc;
         }, []);
 
-        return res.status(200).json(
+        res.status(200).json(
           decryptedItems.map((post: Item) => ({
             id: post.id,
             value: JSON.parse(post.value),
           })),
         );
+        return;
       } catch (error) {
         logger.error(error);
-        throw error;
+        next(error);
       }
     },
   );
 
   encryptedRouter.post(
     "/items/:id",
-    async (req, res): Promise<Response> => {
+    async (req, res, next): Promise<void> => {
       const encryptionKey = req.header("Authorization");
 
       if (!encryptionKey) {
-        return sendErrorResponse(ERRORS.missingEncryptionKey, res);
+        sendErrorResponse(ERRORS.missingEncryptionKey, res);
+        return;
       }
 
       const { id } = req.params;
       const { value } = req.body;
 
       if (!value) {
-        return sendErrorResponse(ERRORS.wrongRequestBody, res);
+        sendErrorResponse(ERRORS.wrongRequestBody, res);
+        return;
       }
 
       try {
@@ -130,13 +119,14 @@ export default function createEncryptedRouter({ db }: ApiRouterArguments): expre
           .assign(newItem)
           .write();
 
-        return res.status(200).json({
+        res.status(200).json({
           id,
           result: "success",
         });
+        return;
       } catch (error) {
         logger.error(error);
-        throw error;
+        next(error);
       }
     },
   );
