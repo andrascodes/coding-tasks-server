@@ -5,6 +5,7 @@ export function tearDownDb(db: Database): void {
   db.setFields([]).write();
   db.setUsers([]).write();
   db.setItems([]).write();
+  db.setTokens([]).write();
 }
 
 export function setupDb(db: Database): number[] {

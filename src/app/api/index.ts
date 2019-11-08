@@ -1,13 +1,24 @@
 import express, { Response } from "express";
+import rateLimit from "express-rate-limit";
+import fetch from "node-fetch";
 import { ExpressError } from "../../types/utils";
 import { Match, Field, MatchResponse, User, Database } from "../../types/database";
 import API_ROUTES from "../../constants/apiRoutes";
+import sendErrorResponse from "../utils/sendErrorResponse";
+import ERRORS from "../../constants/errors";
+import createAuthorizationMiddleware from "./authorization";
+import { countriesApiUrl, exchangeRateApiUrl } from "../../config";
+import createCountriesApi, { CountrySearchItem } from "../../lib/countriesApi";
+import createExchangeRateApi from "../../lib/exchangeRateApi";
 
 interface ApiRouterArguments {
   db: Database;
 }
 
 export default function createApiRouter({ db }: ApiRouterArguments): express.Router {
+  const countriesApi = createCountriesApi({ apiUrl: countriesApiUrl, fetch });
+  const exchangeRateApi = createExchangeRateApi({ apiUrl: exchangeRateApiUrl, fetch });
+
   const apiRouter = express.Router();
 
   apiRouter.get(
@@ -19,8 +30,8 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
     },
   );
 
-  apiRouter.get(`/${API_ROUTES.errorcheck}`, (req, res): void => {
-    throw new ExpressError(500);
+  apiRouter.get(`/${API_ROUTES.errorcheck}`, (req, res, next): void => {
+    next(new ExpressError(500));
   });
 
   apiRouter.get(
@@ -70,17 +81,7 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
         .value();
 
       if (!event) {
-        return res.status(404).format({
-          // html() {
-          //   res.render("404", { url: req.url });
-          // },
-          json() {
-            res.json({ error: "Not found" });
-          },
-          default() {
-            res.type("txt").send("Not found");
-          },
-        });
+        return sendErrorResponse(ERRORS.resourceNotFound, res);
       }
       const fields: Field[] = db.getFields().value();
 
@@ -140,76 +141,143 @@ export default function createApiRouter({ db }: ApiRouterArguments): express.Rou
 
   apiRouter.post(
     `/${API_ROUTES.login}`,
-    async (req, res): Promise<Response> => {
+    async (req, res, next): Promise<void> => {
+      const clientId = req.header("Client-Id");
+      if (!clientId) {
+        sendErrorResponse(ERRORS.missingClientId, res);
+        return;
+      }
+
       const authHeader = req.header("Authorization");
       const encodedUsernamePassword = authHeader && authHeader.split("Basic ")[1];
 
       if (!encodedUsernamePassword) {
-        return res.status(400).format({
-          // html() {
-          //   res.render("400", { url: req.url });
-          // },
-          json() {
-            res.json({ error: "Bad Request" });
-          },
-          default() {
-            res.type("txt").send("Bad Request");
-          },
-        });
+        sendErrorResponse(ERRORS.wrongLoginRequest, res);
+        return;
       }
 
-      const usernamePasswordBuffer = Buffer.from(encodedUsernamePassword, "base64");
-      const usernamePassword = usernamePasswordBuffer && usernamePasswordBuffer.toString();
-      const [username, password] = usernamePassword.split(":");
+      try {
+        const usernamePasswordBuffer = Buffer.from(encodedUsernamePassword, "base64");
+        const usernamePassword = usernamePasswordBuffer && usernamePasswordBuffer.toString();
+        const [username, password] = usernamePassword.split(":");
 
-      if (!username || !password) {
-        return res.status(400).format({
-          // html() {
-          //   res.render("400", { url: req.url });
-          // },
-          json() {
-            res.json({ error: "Bad Request" });
-          },
-          default() {
-            res.type("txt").send("Bad Request");
+        if (!username || !password) {
+          sendErrorResponse(ERRORS.wrongLoginRequest, res);
+          return;
+        }
+
+        const [userExists, passwordsMatch] = await db.authenticateUser({ username, password });
+
+        if (!userExists) {
+          const savedUser = await db.createUser({ username, password });
+          const token = await db.createToken(savedUser, clientId);
+
+          res
+            .status(200)
+            .header("Authorization", token)
+            .json({
+              data: {
+                id: savedUser.id,
+                username: savedUser.username,
+              },
+            });
+          return;
+        }
+
+        const user = userExists as User;
+
+        if (!passwordsMatch) {
+          sendErrorResponse(ERRORS.incorrectLogin, res);
+          return;
+        }
+
+        const token = await db.createToken(user, clientId);
+
+        res
+          .status(200)
+          .header("Authorization", token)
+          .json({
+            data: {
+              id: user.id,
+              username: user.username,
+            },
+          });
+        return;
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  const createCountriesLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 30, // Block after 30 requests
+    keyGenerator(req, res) {
+      // per Token
+      return res.locals.user.token;
+    },
+    handler(req, res) {
+      sendErrorResponse(ERRORS.limitReached, res);
+    },
+  });
+
+  apiRouter.get(
+    `/country`,
+    createAuthorizationMiddleware(db),
+    async (req, res, next): Promise<void> => {
+      try {
+        const searchString =
+          req.query.search && req.query.search.includes('"') ? req.query.search.split('"')[1] : req.query.search;
+
+        if (!searchString) {
+          sendErrorResponse(ERRORS.wrongSearchRequest, res);
+          return;
+        }
+
+        const result = await countriesApi.search(searchString);
+
+        res.status(200).json({
+          result,
+        });
+        return;
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  apiRouter.get(
+    `/country/:code`,
+    createAuthorizationMiddleware(db),
+    createCountriesLimiter,
+    async (req, res, next): Promise<void> => {
+      const { code: countryCode } = req.params;
+
+      try {
+        const result = await countriesApi.getByCode(countryCode);
+        if (!result) {
+          sendErrorResponse(ERRORS.resourceNotFound, res);
+          return;
+        }
+
+        const currencyBase = "SEK";
+        const rates = await exchangeRateApi.latest(result.currencies.map(({ code }) => code), "SEK");
+        res.status(200).json({
+          result: {
+            ...result,
+            currencies: result.currencies.map(({ code, name, symbol }) => ({
+              code,
+              name,
+              symbol,
+              base: currencyBase,
+              rate: rates[code],
+            })),
           },
         });
+        return;
+      } catch (error) {
+        next(error);
       }
-
-      const [userExists, passwordsMatch] = await db.authenticateUser({ username, password });
-
-      if (!userExists) {
-        const savedUser = await db.createUser({ username, password });
-
-        return res.status(200).json({
-          data: {
-            id: savedUser.id,
-            token: savedUser.password,
-          },
-        });
-      }
-
-      const user = userExists as User;
-
-      if (!passwordsMatch) {
-        return res.status(401).format({
-          // html() {
-          //   res.render("401", { url: req.url });
-          // },
-          json() {
-            res.json({ error: "Incorrect username or password" });
-          },
-          default() {
-            res.type("txt").send("Incorrect username or password");
-          },
-        });
-      }
-      return res.status(200).json({
-        data: {
-          id: user.id,
-          token: user.password,
-        },
-      });
     },
   );
 
