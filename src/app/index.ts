@@ -52,12 +52,12 @@ export default function createApp({ port, db }: CreateAppArguments): express.App
   });
 
   // Error handler
-  app.use((err: ExpressError, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((err: ExpressError, req: express.Request, res: express.Response, next: express.NextFunction): void => {
     // we may use properties of the error object
     // here and next(err) appropriately, or if
     // we possibly recovered from the error, simply next().
-    res.status(err.status || 500);
-    res.format({
+    logger.error(err);
+    res.status(err.status || 500).format({
       // html() {
       //  res.render("500", { error: err });
       // },
@@ -68,6 +68,7 @@ export default function createApp({ port, db }: CreateAppArguments): express.App
         res.type("txt").send("Server error");
       },
     });
+    next();
   });
 
   return app;
