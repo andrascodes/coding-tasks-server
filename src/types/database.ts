@@ -37,7 +37,12 @@ export interface User {
   id: string;
   username: string;
   password: string;
-  initializationVector: string;
+}
+
+export interface UserWithToken {
+  id: string;
+  username: string;
+  token: string;
 }
 
 export interface AuthInput {
@@ -50,6 +55,12 @@ export interface Item {
   value: string;
 }
 
+export interface Token {
+  tokenHash: string;
+  username: string;
+  client: string;
+}
+
 export interface Database {
   getEvents: () => any;
   setEvents: (value: any) => any;
@@ -60,6 +71,10 @@ export interface Database {
   getRSVPs: () => any;
   getItems: () => any;
   setItems: (value: any) => any;
+  getTokens: () => any;
+  setTokens: (value: any) => any;
   createUser: (input: AuthInput) => Promise<User>;
   authenticateUser: (input: AuthInput) => Promise<[boolean | User, boolean]>;
+  createToken: (user: User, clientId: string) => Promise<string>;
+  authorizeUser: (token: string) => Promise<UserWithToken>;
 }
