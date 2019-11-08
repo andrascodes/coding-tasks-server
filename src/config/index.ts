@@ -13,15 +13,5 @@ const jwtPrivateKey = devEnvironment
 const issuerId = process.env.ISSUER_ID || "testServer";
 const countriesApiUrl = process.env.COUNTRIES_API_URL;
 const exchangeRateApiUrl = process.env.CURRENCIES_API_URL;
-const exchangeRateApiKey = process.env.CURRENCIES_API_KEY;
 
-export {
-  logger,
-  cryptoPassword,
-  jwtPublicKey,
-  jwtPrivateKey,
-  issuerId,
-  countriesApiUrl,
-  exchangeRateApiUrl,
-  exchangeRateApiKey,
-};
+export { logger, cryptoPassword, jwtPublicKey, jwtPrivateKey, issuerId, countriesApiUrl, exchangeRateApiUrl };
