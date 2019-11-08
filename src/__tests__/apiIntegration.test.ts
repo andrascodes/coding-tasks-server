@@ -338,10 +338,6 @@ describe(`GET ${getUrl("country")}?search="..."`, () => {
   });
 });
 
-// describe GET country/:code
-// valid code
-// invalid code
-// country with obscure currency
 describe(`GET ${getUrl("country")}/:code`, () => {
   let token: string;
 
@@ -374,18 +370,19 @@ describe(`GET ${getUrl("country")}/:code`, () => {
     expect(res.body.result.currencies[0].rate).not.toBe(null);
   });
 
-  it("should return ? if code is invalid", async (): Promise<void> => {
+  it("should return 404 and resourceNotFound error if code is invalid", async (): Promise<void> => {
     const res = await request(app)
       .get(`${getUrl("country")}/asdasd`)
       .set("Authorization", `Bearer ${token}`);
-      expect(res.status).toEqual(404);
-      expect(res.body).toHaveProperty("error");
-      expect(res.body).toHaveProperty("code");
-      expect(res.body.error).toBe(ERRORS.resourceNotFound.message);
-      expect(res.body.code).toBe(ERRORS.resourceNotFound.code);
+    expect(res.status).toEqual(404);
+    expect(res.body).toHaveProperty("error");
+    expect(res.body).toHaveProperty("code");
+    expect(res.body.error).toBe(ERRORS.resourceNotFound.message);
+    expect(res.body.code).toBe(ERRORS.resourceNotFound.code);
   });
 
-  it("should return ? if country currency is not supported by currency API", async (): Promise<void> => {
+  it(`should return result with country name, code, flag, population and currencies (exchange rate set to null)
+   if country currency is not supported by currency API`, async (): Promise<void> => {
     const res = await request(app)
       .get(`${getUrl("country")}/BFA`)
       .set("Authorization", `Bearer ${token}`);
