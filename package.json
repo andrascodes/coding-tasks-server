@@ -14,16 +14,20 @@
     "lint": "eslint --fix ./src/**/*",
     "dev": "./node_modules/.bin/nf start -j Procfile.dev",
     "dev:debug": "ts-node-dev --inspect=4321 --respawn --transpileOnly src/index.ts",
-    "test": "LOG_LEVEL=none jest --watch"
+    "test": "COUNTRIES_API_URL=https://restcountries.eu/rest/v2 CURRENCIES_API_URL=https://api.exchangeratesapi.io NODE_ENV=development LOG_LEVEL=none jest --watch"
   },
   "devDependencies": {
     "@types/bcrypt": "^3.0.0",
     "@types/crypto-js": "^3.1.43",
     "@types/express": "^4.17.1",
+    "@types/express-rate-limit": "^3.3.3",
     "@types/jest": "^24.0.19",
+    "@types/jsonwebtoken": "^8.3.5",
+    "@types/jws": "^3.2.0",
     "@types/lowdb": "^1.0.9",
     "@types/morgan": "^1.7.37",
     "@types/node": "^12.11.6",
+    "@types/node-fetch": "^2.5.3",
     "@types/shortid": "^0.0.29",
     "@types/supertest": "^2.0.8",
     "@types/winston": "^2.4.4",
@@ -46,8 +50,12 @@
     "bcrypt": "^3.0.6",
     "crypto-js": "^3.1.9-1",
     "express": "^4.17.1",
+    "express-rate-limit": "^5.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "jws": "^3.2.2",
     "lowdb": "^1.0.0",
     "morgan": "^1.9.1",
+    "node-fetch": "^2.6.0",
     "shortid": "^2.2.15",
     "winston": "^3.2.1"
   }
