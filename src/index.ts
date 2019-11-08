@@ -3,7 +3,7 @@ import net from "net";
 import createApp from "./app";
 import createDB from "./db";
 
-import logger from "./config/winston";
+import { logger } from "./config";
 
 interface MainReturnType {
   app: express.Application;
@@ -32,4 +32,4 @@ main()
   .then(({ getPort }) => {
     logger.info(`Server is listening on ${getPort()}`);
   })
-  .catch(console.error);
+  .catch(logger.error);
