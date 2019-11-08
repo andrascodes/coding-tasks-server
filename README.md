@@ -452,7 +452,13 @@ Used to query country details and currency exchange rate by the `alpha3Code`.
 
 **Auth required** : YES, JWT token<br>
 
-**Rate limit** : 30 requests per minute per token
+#### Rate limit : 30 requests per minute per token
+
+There are 3 headers specified on the response providing information about the Rate Limit:
+
+- `X-Ratelimit-Limit`: 30 requests
+- `X-Ratelimit-Remaining`: the number of remaining requests
+- `X-Ratelimit-Reset`: the time when the limit resets
 
 ### Success Response
 
@@ -555,5 +561,20 @@ OR
 {
   "error": "Resource with the specified 'id' was not found.",
   "code": "RESOURCE_NOT_FOUND"
+}
+```
+
+#### Rate limit reached
+
+**Condition** : If the API endpoint was called more than 30 times per minute with the same token.
+
+**Code** : `429 Too Many Requests`
+
+**Content** :
+
+```json
+{
+  "error": "The request limit for this API endpoint has been reached.",
+  "code": "LIMIT_REACHED"
 }
 ```
