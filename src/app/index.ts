@@ -1,10 +1,11 @@
 import express from "express";
 import morgan from "morgan";
+import cors from "cors";
 import { ExpressError } from "../types/utils";
 import createEncryptedRouter from "./encrypted";
 import createApiRouter from "./api";
 import { Database } from "../types/database";
-import logger from "../config/winston";
+import { logger, clientUrl } from "../config";
 
 interface CreateAppArguments {
   port: string | undefined;
@@ -14,6 +15,17 @@ interface CreateAppArguments {
 export default function createApp({ port, db }: CreateAppArguments): express.Application {
   const app = express();
   app.set("port", port);
+
+  app.use(
+    cors({
+      origin: clientUrl,
+      methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+      preflightContinue: false,
+      optionsSuccessStatus: 200,
+      exposedHeaders: ["Authorization"],
+      credentials: true,
+    }),
+  );
 
   app.use(
     morgan(process.env.NODE_ENV !== "development" ? "combined" : "dev", {
